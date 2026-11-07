@@ -23,6 +23,11 @@ jobs:
   android:
     name: Android (API 24+)
     runs-on: ubuntu-latest
+    env:
+      # GitHub 的 ubuntu-latest 已自带 Android SDK，直接用，
+      # 不再用 android-actions/setup-android（它会执行已废弃的 `sdkmanager tools`）
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
 
@@ -39,12 +44,12 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - uses: android-actions/setup-android@v3
-
       - name: Install Android SDK packages
         run: |
-          yes | sdkmanager --licenses > /dev/null
-          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -1)"
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
 
       - name: Build mobile web assets
         run: |
