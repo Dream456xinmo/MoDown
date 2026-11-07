@@ -186,7 +186,9 @@ jobs:
           cp -a frontend/dist desktop/frontend/dist
           cd desktop
           go run ./tools/packweb -src frontend/dist -out web.zip
-          CGO_ENABLED=1 go build -tags "desktop,production" -ldflags "-s -w" -o build/bin/MoDown .
+          # 容器内 git 的 safe.directory 归 runner 用户所有，Go 默认的 VCS 版本戳会报
+          # “error obtaining VCS status”，CI 构建不需要版本戳，直接关掉。
+          CGO_ENABLED=1 go build -buildvcs=false -tags "desktop,production" -ldflags "-s -w" -o build/bin/MoDown .
           file build/bin/MoDown
           ldd build/bin/MoDown | grep -E 'webkit|gtk|not found' || true
 
