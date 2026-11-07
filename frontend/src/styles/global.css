@@ -1,0 +1,798 @@
+:root {
+  --bg: #ffffff;
+  --bg-side: #f6f7f9;
+  --bg-hover: #eceef1;
+  --bg-active: #e0e7ff;
+  --fg: #24292f;
+  --fg-dim: #6b7480;
+  --border: #d8dce1;
+  --accent: #4f46e5;
+  --editor-bg: #fdfdfd;
+  --code-bg: #f3f4f6;
+}
+.dark {
+  --bg: #1e1f23;
+  --bg-side: #26272c;
+  --bg-hover: #323438;
+  --bg-active: #2d3550;
+  --fg: #e6e8ea;
+  --fg-dim: #9aa0a8;
+  --border: #3c3e44;
+  --accent: #818cf8;
+  --editor-bg: #232428;
+  --code-bg: #2c2e33;
+}
+
+* { box-sizing: border-box; }
+html, body, #app { height: 100%; margin: 0; }
+body {
+  font-family: -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- 与桌面软件一致的交互：外壳一律不可选中文字 ----------
+   只有三类地方可以拖选：编辑区（富文本 / 源码 / VSCode）、浏览区（预览正文）、输入栏。
+   顶栏、侧栏、文件树（含文件名单元格）、状态栏路径、大纲、下拉面板、长按菜单都是外壳。
+   外壳还要连 -webkit-touch-callout 一起关掉：安卓上长按一旦进入原生文字选择态就会发
+   touchcancel，我们的长按计时被打断，之后 WebView 还会补发 contextmenu，
+   表现为「菜单关掉后，再点别处它又冒出来一次」。 */
+html, body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: default;
+  /* 安卓 WebView 会自作主张放大字号、双击缩放还有 300ms 延迟：都是"网页"痕迹，一起关掉 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+/* 可选中区域：正文、三种编辑器、表单控件与可编辑区 */
+input, textarea, select, [contenteditable="true"],
+.tiptap, .ProseMirror, .cm-host, .cm-host .cm-content, .monaco-host,
+.md-body, .preview, .rich-host, .rich-scroll {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+button, .tree-row, .tree-row .label, .ol-row, .ol-text, .fmt-toolbar, .topbar,
+.statusbar, .sb-path, .editor-switch, .m-tabs, .dd-panel, .ctx-menu,
+.viewer-name, .viewer-hint, .viewer-bar-name, .viewer-empty, .tree-toolbar {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* ---------- 触控设备（手机 / 平板）：保证编辑面拿得到光标与软键盘 ----------
+   Chromium 在 user-select:none 的可编辑面上不放光标，安卓因此弹不出输入法。
+   Monaco 会给编辑器根节点加 .no-user-select，并把 .view-lines / .lines-content 设成不可选
+   （桌面端是为了不让原生选区和它自绘的选区重叠），而平板界面才有 VSCode 模式 →
+   表现为「平板上打字输入法打不开」。这里在粗指针 / 无悬停的设备上强行改回 text，
+   并给输入替身一个非零尺寸：安卓不给 0×0 的输入面挂软键盘。 */
+@media (hover: none), (pointer: coarse) {
+  .monaco-host .monaco-editor,
+  .monaco-host .monaco-editor .view-lines,
+  .monaco-host .monaco-editor .view-line,
+  .monaco-host .monaco-editor .lines-content,
+  .monaco-host .monaco-editor .native-edit-context,
+  .monaco-host .monaco-editor textarea.inputarea,
+  .monaco-host .monaco-editor .ime-text-area {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+  .monaco-host .monaco-editor .native-edit-context,
+  .monaco-host .monaco-editor textarea.inputarea {
+    width: 1px !important;
+    height: 1px !important;
+    min-width: 1px;
+    min-height: 1px;
+    opacity: 0;
+    z-index: 25;
+    pointer-events: none; /* 别让它挡住正文的点击 */
+  }
+}
+/* 弹窗（设置 / 提示 / 确认）属于界面外壳：文字不可左键拖选，
+   只有其中的输入控件保留文本选择与光标 */
+.dialog {
+  -webkit-user-select: none;
+  user-select: none;
+}
+.dialog input, .dialog textarea, .dialog select,
+.dialog [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+/* 内容区恢复文本光标：界面组件（顶栏/按钮/文件树/状态栏）仍是箭头指针，
+   编辑区与预览区内部才是 I 形光标 */
+input, textarea, select, [contenteditable="true"],
+.tiptap, .ProseMirror, .cm-host, .cm-host .cm-scroller, .cm-host .cm-content,
+.monaco-host, .monaco-host .monaco-editor, .monaco-host .view-lines,
+.md-body, .preview, .rich-host, .rich-scroll, .file-viewer {
+  cursor: auto;
+}
+.tiptap, .ProseMirror, .cm-host .cm-content, .monaco-host .view-lines {
+  cursor: text;
+}
+/* 选中高亮统一为主题色（与桌面软件一致，而不是浏览器默认蓝） */
+::selection { background: var(--bg-active); color: var(--fg); }
+
+/* ---------- 加载动画（打开文件 / 导出 / 渲染） ---------- */
+.spinner {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border: 1.6px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: xmd-spin .7s linear infinite;
+  flex: none;
+}
+@keyframes xmd-spin { to { transform: rotate(360deg); } }
+button {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+button:hover { background: var(--bg-hover); }
+button.active { background: var(--bg-active); color: var(--accent); }
+/* 输入框 / 下拉的观感统一放在文末「表单控件：抹掉浏览器 · 安卓默认外观」一节，
+   这里不要再单独给 input/select 画 UA 风格的边框与底色（否则两边打架） */
+
+/* ---------- 布局（与旧版一致） ---------- */
+.app { display: flex; flex-direction: column; height: 100%; }
+.main { display: flex; flex: 1; min-height: 0; }
+.main.mobile { flex-direction: column; position: relative; }
+.pane { flex: 1; min-width: 0; display: flex; overflow: hidden; }
+/* PC 多栏可拖拽：宽度由 App.vue 的 inline style 给出，这里只锁上下限与不参与 flex 伸缩 */
+.sidebar {
+  flex: none;
+  width: 230px; min-width: 160px; max-width: 520px;
+  background: var(--bg-side);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 8px 0;
+}
+.content { display: flex; flex: 1; min-width: 0; min-height: 0; height: 100%; }
+.editor-pane { flex: 1; min-width: 0; min-height: 0; height: 100%; display: flex; }
+.preview-pane {
+  flex: 1; min-width: 0;
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  background: var(--bg);
+  min-width: 220px;
+}
+.outline-pane {
+  flex: none;
+  width: 220px; min-width: 150px; max-width: 460px;
+  background: var(--bg-side);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 10px;
+}
+/* 拖拽分栏时锁住光标与选中，避免拖到文字上变成选区 */
+body.pane-resizing, body.pane-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+.statusbar {
+  height: 26px;
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 12px;
+  font-size: 12px;
+  color: var(--fg-dim);
+  border-top: 1px solid var(--border);
+  background: var(--bg-side);
+}
+.sb-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-dirty { color: #d97706; }
+.dark .sb-dirty { color: #fbbf24; }
+/* 左下角：文件名后跟随的加载动画（打开文件 / 导出 / 渲染） */
+.sb-busy { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); flex: none; }
+.sb-spacer { flex: 1; }
+.sb-meta { flex: none; }
+/* 状态栏里的编辑模式切换（富文本 / 源码 / VSCode / 预览） */
+.sb-mode { display: inline-flex; align-items: center; gap: 1px; flex: none; }
+.sb-mode button {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 1px 4px; border-radius: 4px; color: var(--fg-dim); flex: none;
+}
+.sb-mode button:hover { background: var(--bg-hover); color: var(--fg); }
+.sb-mode button.active { color: var(--accent); background: var(--bg-active); }
+.more-wrap { position: relative; }
+
+/* ---------- 富文本语法风险提示条 ---------- */
+.rich-risk {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  margin: 0 0 6px; padding: 7px 10px;
+  font-size: 12px; line-height: 1.5;
+  color: #92400e; background: #fff7e0;
+  border: 1px solid #f0c36d; border-radius: 6px;
+}
+.rich-risk-text { flex: 1 1 240px; }
+.rich-risk-actions { display: flex; gap: 6px; flex: none; }
+.rich-risk-actions button {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; padding: 2px 8px; white-space: nowrap;
+}
+.dark .rich-risk {
+  color: #fcd9a0; background: #3a2f18; border-color: #6b5324;
+}
+
+/* ---------- 顶栏 ---------- */
+.topbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-side);
+  /* 不换行：左侧按钮组自己按可用宽度收缩，装不下的收进「…」溢出菜单 */
+  flex-wrap: nowrap;
+}
+/* 顶栏按钮：无标题文字区，字号与系统菜单一致（12px） */
+.topbar { gap: 4px; row-gap: 2px; }
+.topbar button {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; padding: 3px 8px;
+}
+.topbar button:disabled { opacity: .45; cursor: default; }
+.topbar .spacer { flex: 1; }
+.dropdown { position: relative; }
+.dd-panel {
+  position: absolute; top: 110%; left: 0; z-index: 50;
+  min-width: 130px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.15);
+  padding: 4px;
+}
+.dd-item { padding: 5px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 12px; }
+.dd-item:hover { background: var(--bg-hover); }
+.dd-item.danger { color: #dc2626; }
+.dd-item.danger:hover { background: #fee2e2; }
+.dark .dd-item.danger { color: #f87171; }
+.dark .dd-item.danger:hover { background: #3f2226; }
+
+/* ---------- 文件树 ---------- */
+/* 工具栏按钮会随功能增加（新建文件/新建文件夹/导入/打开文件夹/刷新），允许换行以免挤爆侧栏 */
+.tree-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 8px 8px; }
+/* 刷新进行中图标转起来：跨进程读目录可能耗时几百毫秒，不给反馈会被当成没响应而连点 */
+.tree-toolbar .spinning { animation: xmd-spin 0.7s linear infinite; }
+@keyframes xmd-spin { to { transform: rotate(360deg); } }
+.tree-toolbar button { display: flex; align-items: center; color: var(--fg-dim); padding: 3px 6px; }
+.tree-toolbar button:hover { color: var(--accent); }
+.tree-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 8px;
+  font-size: 13.5px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.tree-row:hover { background: var(--bg-hover); }
+.tree-row.active { background: var(--bg-active); color: var(--accent); }
+/* 拖外部文件经过文件树时，标出"会复制进哪个目录"（VSCode 资源管理器的落地反馈）；
+   dropDir==='' 表示要落进工作区根目录，这时高亮整棵树 */
+.tree-row.drop-target { background: var(--bg-active); outline: 1px solid var(--accent); outline-offset: -1px; }
+.file-tree.drop-target { outline: 1px solid var(--accent); outline-offset: -3px; border-radius: 6px; }
+.tree-row .twisty { width: 14px; height: 14px; flex: none; display: flex; align-items: center; justify-content: center; color: var(--fg-dim); }
+.tree-row .twisty svg { transition: transform .12s ease; }
+.tree-row .node-icon { flex: none; }
+.tree-row .label { overflow: hidden; text-overflow: ellipsis; }
+/* 未保存草稿标记（切走再切回仍在，和 VSCode 的圆点一致） */
+.tree-row .dirty-dot {
+  margin-left: auto; flex: none;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #d97706;
+}
+.dark .tree-row .dirty-dot { background: #fbbf24; }
+.ctx-menu {
+  position: fixed; z-index: 100;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.18);
+  padding: 4px; min-width: 130px;
+  font-size: 12px;
+}
+/* 右键菜单遮罩：点击/滚轮/右键任意处即关闭 */
+.ctx-mask { position: fixed; inset: 0; z-index: 99; }
+
+/* ---------- 编辑器 ---------- */
+/* min-height:0 / max-height:100% 必须有：否则长文件里 Monaco 的固有高度会把编辑区撑高，
+   把底部状态栏顶到可视区外（短文件看不出来，长文件必现）。 */
+.editor-wrap {
+  flex: 1; min-width: 0; min-height: 0; max-height: 100%; height: 100%;
+  display: flex; position: relative; overflow: hidden;
+}
+/* 富文本/源码/VSCode/预览切换器：悬浮于编辑器右下角 */
+.editor-switch {
+  /* 浮在最上层：Monaco 内部有很高的 z-index 浮层，切换器必须比它们更高 */
+  position: fixed; bottom: 34px; right: 12px; z-index: 9999;
+  display: flex; gap: 2px; padding: 2px;
+  background: var(--bg-side);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  opacity: .92;
+}
+/* 切换器只有图标（标题走 title 提示），触控区略放大 */
+.editor-switch button {
+  display: flex; align-items: center; justify-content: center;
+  padding: 5px; font-size: 12px; border-radius: 6px;
+}
+.cm-host { flex: 1; min-width: 0; background: var(--editor-bg); overflow: hidden; }
+.cm-host .cm-editor { height: 100%; }
+.cm-host .cm { font-size: 14.5px; }
+/* VSCode（Monaco）：占据整个编辑区（不再与富文本左右分屏） */
+.split-wrap { flex: 1; min-width: 0; display: flex; }
+.split-wrap > * { flex: 1; min-width: 0; }
+.split-divider { flex: none; width: 1px; background: var(--border); }
+.monaco-host { position: relative; background: var(--editor-bg); }
+.editor-wrap > .monaco-host { flex: 1; min-width: 0; }
+/* 编辑区右下角切换器上的语言标识 */
+.editor-lang {
+  display: flex; align-items: center; padding: 0 8px;
+  font-size: 11.5px; color: var(--fg-dim);
+  border-right: 1px solid var(--border); margin-right: 2px;
+  max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.monaco-host .monaco-editor { position: absolute; inset: 0; }
+.monaco-loading {
+  position: absolute; inset: 0; z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12.5px; color: var(--fg-dim);
+  background: var(--editor-bg);
+}
+/* ---------- 文件预览（FileViewer） ---------- */
+.file-viewer {
+  flex: 1; min-width: 0; display: flex; flex-direction: column;
+  overflow: auto; background: var(--bg);
+}
+.viewer-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; color: var(--fg-dim); font-size: 13px; text-align: center; line-height: 1.8;
+}
+.viewer-center {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px; padding: 18px;
+}
+.viewer-center img { max-width: 100%; max-height: 82vh; object-fit: contain; border-radius: 4px; }
+.viewer-center video { max-width: 100%; max-height: 80vh; }
+.viewer-center audio { width: min(480px, 100%); }
+.viewer-center .viewer-frame { width: 100%; flex: 1; }
+.viewer-frame { flex: 1; width: 100%; min-height: 0; border: none; background: var(--bg); }
+.viewer-name { font-size: 14px; font-weight: 600; margin: 0; word-break: break-all; }
+.viewer-hint { font-size: 12.5px; color: var(--fg-dim); text-align: center; line-height: 1.8; margin: 0; }
+.viewer-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--accent); color: #fff; border-radius: 8px; padding: 7px 14px; font-size: 13px;
+}
+.viewer-btn:hover { filter: brightness(1.08); background: var(--accent); }
+
+/* ---------- 预览（排版见 md-themes.css） ---------- */
+
+/* ---------- 大纲 ---------- */
+.outline-head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 8px 2px; }
+.outline-title { font-size: 12px; color: var(--fg-dim); }
+.outline-all-btn { padding: 3px 5px; display: flex; align-items: center; color: var(--fg-dim); }
+.ol-row {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 13px; padding: 3px 6px; border-radius: 6px;
+  cursor: pointer; user-select: none;
+}
+.ol-row:hover { background: var(--bg-hover); }
+.ol-twisty {
+  width: 14px; height: 14px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px;
+}
+/* 箭头是独立热区：只负责展开/收起；点击整行才是跳转到标题 */
+.ol-twisty-btn {
+  padding: 0; border: none; background: transparent;
+  color: var(--fg-dim); cursor: pointer;
+}
+.ol-twisty-btn:hover { background: var(--bg-hover); color: var(--fg); }
+.ol-badge {
+  flex: none; font-size: 10px; color: var(--fg-dim);
+  border: 1px solid var(--border); border-radius: 4px; padding: 0 3px;
+}
+.ol-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- 移动端 ---------- */
+.m-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-side);
+}
+.m-head .title { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m-body { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
+.m-body > * { flex: 1; min-height: 0; }
+/* 底部 tab：图标 + 文字 */
+.m-tabs {
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: var(--bg-side);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.m-tabs button {
+  flex: 1; border-radius: 0; padding: 8px 0 calc(8px + 2px);
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-size: 11px; color: var(--fg-dim);
+}
+.m-tabs button.active { color: var(--accent); background: transparent; }
+.m-tabs button:active { background: var(--bg-hover); }
+/* 文件树抽屉（自身即遮罩，点击空白处关闭） */
+.drawer {
+  position: absolute; inset: 0; z-index: 60;
+  background: rgba(0,0,0,.35);
+  display: none;
+}
+.drawer.open { display: block; }
+.drawer-panel {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 80%; max-width: 330px;
+  background: var(--bg-side);
+  overflow-y: auto;
+  padding: calc(10px + env(safe-area-inset-top)) 0 calc(16px + env(safe-area-inset-bottom));
+  box-shadow: 4px 0 20px rgba(0,0,0,.2);
+  animation: drawer-in .22s ease;
+}
+@keyframes drawer-in { from { transform: translateX(-40%); } }
+
+/* ---------- 对话框 ---------- */
+.dialog-mask {
+  position: fixed; inset: 0; z-index: 80;
+  background: rgba(0,0,0,.4);
+  display: flex; align-items: center; justify-content: center;
+}
+.dialog {
+  width: min(420px, 92vw);
+  /* 自适应视口高度：内容超出时在弹窗内部滚动，避免底部内容看不到 */
+  max-height: 88vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+}
+/* 手机端全屏页面自行占满整屏高度 */
+.dialog.full { max-height: none; }
+.dialog h3 { margin: 0 0 12px; }
+.dialog .row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+.dialog .footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+/* ---------- 自建 Prompt/Confirm 弹窗 ---------- */
+.app-dialog { padding: 14px 16px; }
+.app-dialog-head { display: flex; align-items: center; justify-content: space-between; }
+.app-dialog-title { font-size: 14px; font-weight: 600; }
+.app-dialog-x { padding: 2px 4px; color: var(--fg-dim); display: flex; }
+.app-dialog-x:hover { color: var(--fg); }
+.app-dialog-msg { margin: 8px 0 10px; font-size: 12.5px; color: var(--fg-dim); word-break: break-all; }
+.app-dialog input { font-size: 13px; }
+.dialog .footer .primary { background: var(--accent); color: #fff; border-radius: 6px; }
+.dialog .footer .primary:hover { filter: brightness(1.1); }
+
+/* ---------- 移动端底部弹窗（大纲 sheet）：拖拽把手 + 滑入/下滑关闭动画 ---------- */
+.sheet-mask {
+  position: fixed; inset: 0; z-index: 70;
+  display: flex;
+  background: rgba(0,0,0,.4);
+  align-items: flex-end;
+  opacity: 0;
+  transition: opacity .24s ease;
+}
+/* 关闭动画期间整层不拦截点击，避免挡住底部 tab 的再次点击 */
+.sheet-mask:not(.open) { pointer-events: none; }
+.sheet-mask .sheet { pointer-events: auto; }
+.sheet-mask.open { opacity: 1; }
+.sheet {
+  width: 100%; max-width: 640px; margin: 0 auto;
+  padding: 0;
+  border-radius: 16px 16px 0 0;
+  height: 68vh;
+  display: flex; flex-direction: column;
+  transform: translateY(100%);
+  transition: transform .28s cubic-bezier(.25,.8,.35,1);
+  box-shadow: 0 -8px 30px rgba(0,0,0,.25);
+  background: var(--bg);
+}
+.sheet-mask.open .sheet { transform: translateY(0); }
+/* 拖拽中跟手，不要过渡 */
+.sheet.dragging { transition: none; }
+.sheet-grab {
+  flex: none;
+  width: 100%; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: grab; touch-action: none;
+}
+.sheet-grab::before {
+  content: '';
+  width: 40px; height: 4.5px; border-radius: 3px;
+  background: var(--border);
+}
+.sheet-head {
+  flex: none;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 2px 18px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.sheet-title { font-size: 15px; font-weight: 600; }
+.sheet-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; margin: -4px -6px -4px 0;
+  border-radius: 8px; color: var(--fg-dim);
+}
+.sheet-body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 12px 14px calc(24px + env(safe-area-inset-bottom));
+}
+
+/* ---------- 提示条（非错误：引擎回退等） ---------- */
+.toast-notice {
+  position: fixed; z-index: 200;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom) + 74px);
+  max-width: min(520px, 92vw);
+  background: var(--bg-side); color: var(--fg);
+  border: 1px solid var(--border);
+  border-left: 3px solid #d97706;
+  padding: 9px 14px; border-radius: 10px;
+  font-size: 12.5px; line-height: 1.5; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,0,0,.18);
+}
+.dark .toast-notice { border-left-color: #fbbf24; }
+@media (min-width: 901px) {
+  .toast-notice { bottom: 40px; }
+}
+
+/* ---------- 错误提示 ---------- */
+.toast-error {
+  position: fixed; bottom: 36px; right: 12px; z-index: 200;
+  background: #fee; color: #b91c1c;
+  border: 1px solid #fca;
+  padding: 8px 12px; border-radius: 8px; font-size: 12.5px; cursor: pointer;
+}
+.dark .toast-error { background: #3f2226; color: #fca5a5; border-color: #7f1d1d; }
+
+/* ---------- 成功提示（导出成功、保存成功等） ---------- */
+.toast-success {
+  position: fixed; z-index: 200;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom) + 74px);
+  display: flex; align-items: center; gap: 6px;
+  max-width: min(520px, 92vw);
+  background: #ecfdf5; color: #047857;
+  border: 1px solid #a7f3d0; border-left: 3px solid #10b981;
+  padding: 8px 14px; border-radius: 10px;
+  font-size: 12.5px; line-height: 1.5; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,0,0,.14);
+  animation: toast-in .18s ease;
+}
+.dark .toast-success { background: #10312a; color: #6ee7b7; border-color: #065f46; border-left-color: #10b981; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 6px); } }
+@media (min-width: 901px) {
+  .toast-success { bottom: 40px; }
+}
+
+/* 预览正文的阅读宽度：参考站点是 72ch，避免在宽屏上代码块/正文拉得过长 */
+.preview .md-body { max-width: 72ch; margin: 0 auto; }
+
+/* ---------- Markdown 代码块：语言标签 + 复制按钮 + 渲染线程降级样式 ---------- */
+.md-code-block {
+  position: relative; margin: .9em auto;
+  /* 整块只保留这一条外边框：语言栏和代码区共用 */
+  border: 1px solid var(--md-table-border);
+  border-radius: var(--md-radius);
+  overflow: hidden;
+  max-width: 100%;
+}
+/* 顶部语言栏：显示 bash / python / java / ini / yaml 等围栏语言 */
+.md-code-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  min-height: 28px; padding: 4px 10px;
+  font-size: 11.5px; color: var(--fg-dim);
+  background: color-mix(in srgb, var(--code-bg) 78%, var(--bg));
+  border: none;
+  border-bottom: 1px solid var(--md-table-border);
+  border-radius: 0;
+}
+.md-code-lang {
+  font-family: "Cascadia Code", Consolas, "JetBrains Mono", monospace;
+  letter-spacing: .02em;
+  user-select: none;
+}
+/* 有语言栏时，pre 的上下圆角只保留底部，并与头部贴合 */
+.md-code-block > pre {
+  margin: 0 !important;
+  /* 圆角/边框都由外层 .md-code-block 统一裁切，pre 自己不再画边框 */
+  border-radius: 0 !important;
+  border: none;
+}
+/* 复制按钮在语言栏里（不再绝对定位盖在代码右上角） */
+.md-code-head .code-copy {
+  display: flex; align-items: center; gap: 4px;
+  padding: 1px 8px; font-size: 11.5px; line-height: 18px;
+  color: var(--fg-dim);
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  border: 1px solid var(--border); border-radius: 6px;
+  opacity: .85; transition: opacity .15s ease, color .15s ease;
+}
+.md-code-head .code-copy:hover, .md-code-head .code-copy:focus-visible { opacity: 1; }
+/* 兼容旧的、没有语言栏的代码块（无围栏信息的缩进代码走同一套） */
+.md-body .md-code-block > .code-copy,
+.md-scope .md-code-block > .code-copy {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  display: flex; align-items: center; gap: 4px;
+  padding: 2px 8px; font-size: 11.5px; line-height: 18px;
+  color: var(--fg-dim);
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  border: 1px solid var(--border); border-radius: 6px;
+  opacity: 0; transition: opacity .15s ease, color .15s ease;
+}
+.md-code-block:hover > .code-copy, .code-copy:focus-visible { opacity: 1; }
+.code-copy.copied { color: #16a34a; border-color: #16a34a; }
+/* 触控设备没有 hover，复制按钮常显 */
+@media (hover: none), (max-width: 900px) {
+  .md-code-block .code-copy { opacity: .92; }
+}
+
+/* 富文本（Tiptap）代码块：语言标签用 ProseMirror 装饰挂到 pre 右上角 */
+.md-scope pre { position: relative; }
+.code-lang-label {
+  position: absolute; top: 6px; right: 12px;
+  padding: 1px 6px; font-size: 11px; line-height: 16px;
+  font-family: "Cascadia Code", Consolas, "JetBrains Mono", monospace;
+  color: var(--fg-dim);
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
+  border: 1px solid var(--border); border-radius: 4px;
+  pointer-events: none;
+  user-select: none;
+}
+.md-fallback {
+  white-space: pre-wrap; word-break: break-word;
+  background: var(--code-bg); border-radius: 8px; padding: 12px;
+  font-size: 13px;
+}
+
+/* ---------- 富文本工具栏 ----------
+   默认单行：按可用宽度自动折叠放不下的按钮组，尾部「更多」按钮可展开换行全显 */
+.fmt-toolbar {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-side);
+  user-select: none;
+}
+.fmt-bar {
+  display: flex; align-items: center; flex-wrap: nowrap;
+  gap: 3px;
+  position: relative; /* 折叠区/测量用的包含块 */
+  min-width: 0;
+  overflow: hidden; /* 万一测量有偏差，也只在工具栏内裁切，不会顶出窗口 */
+}
+.fmt-toolbar.expanded .fmt-bar { flex-wrap: wrap; row-gap: 4px; }
+.fmt-group { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+/* 被折叠的组：直接不占位（自然宽度另有一次「全部摆出来」的测量得到） */
+.fmt-hidden { display: none; }
+.fmt-toolbar button {
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+  min-width: 26px; height: 26px; padding: 2px 5px;
+  font-size: 12px; color: var(--fg-dim); border-radius: 6px;
+}
+.fmt-toolbar button:hover { background: var(--bg-hover); color: var(--fg); }
+.fmt-toolbar button.active { background: var(--bg-active); color: var(--accent); }
+.fmt-sep { width: 1px; height: 16px; background: var(--border); margin: 0 4px; }
+
+/* ---------- 深/浅色适配：表单控件与配色方案 ---------- */
+:root { color-scheme: light; }
+.dark { color-scheme: dark; }
+
+/* ---------- 表单控件：抹掉浏览器 · 安卓默认外观 ----------
+   桌面 Chrome 与安卓 WebView 都会给 <input>/<select> 画一圈 UA 自带的东西：立体边框、
+   圆角、下拉箭头、数字微调箭头、搜索清除按钮、聚焦蓝框、自动填充底色，两平台长得还不一样。
+   统一做法：appearance:none 关掉 UA 绘制，用底色区分控件，边框只在悬停/聚焦时出现
+   （聚焦边框同时也是给键盘用户的焦点提示）。 */
+input, textarea, select {
+  -webkit-appearance: none;
+  appearance: none;
+  font: inherit;
+  color: var(--fg);
+  background-color: var(--bg-hover);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 8px;
+  outline: none;
+  box-shadow: none;
+}
+input:not([type="checkbox"]):not([type="radio"]):hover,
+textarea:hover, select:hover { border-color: var(--border); }
+input:not([type="checkbox"]):not([type="radio"]):focus,
+textarea:focus, select:focus { border-color: var(--accent); background-color: var(--bg); }
+input::placeholder, textarea::placeholder { color: var(--fg-dim); opacity: 0.8; }
+/* 复选框 / 单选框靠 UA 原生绘制，别被上面的 appearance:none 干掉 */
+input[type="checkbox"], input[type="radio"] {
+  -webkit-appearance: auto;
+  appearance: auto;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; }
+/* 下拉箭头自绘：系统箭头各平台大小/位置/颜色都不同 */
+select {
+  padding-right: 24px;
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  background-size: 11px 11px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.6 4.6 6 8l3.4-3.4' fill='none' stroke='%236b7480' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.dark select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.6 4.6 6 8l3.4-3.4' fill='none' stroke='%239da3ad' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+/* 数字微调箭头 / 搜索框清除按钮：纯浏览器痕迹 */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; display: none; }
+/* 自动填充的黄底、白底和黑字是浏览器强制画的，用内阴影盖掉 */
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--fg);
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-hover) inset;
+  caret-color: var(--fg);
+}
+/* 焦点一律用边框/底色表达，去掉浏览器那圈蓝框；按钮等仍保留键盘 :focus-visible 提示 */
+:focus { outline: none; }
+button:focus-visible, [role="button"]:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* 设置弹窗里的下拉 / 输入框加大：原 13px / 4px 内边距偏小，选项不好点也不好读。
+   注意 :not(...) 是给 <input>（不写 type，DialogHost 的提示框）留的，它不匹配 input[type="text"]。 */
+.dialog select, .dialog input:not([type="checkbox"]):not([type="radio"]) {
+  font-size: 13.5px; padding: 6px 10px; min-width: 148px;
+}
+.dialog select { padding-right: 30px; }
+.dialog select option { font-size: 13.5px; }
+.dialog input[type="checkbox"] { width: 17px; height: 17px; }
+.dialog-sub { margin: 16px 0 2px; font-size: 12.5px; font-weight: 600; color: var(--fg-dim); }
+.dialog-hint { font-size: 12px; color: var(--fg-dim); }
+
+/* ---------- 树内联新建输入（VSCode 风格） ---------- */
+.inline-input {
+  flex: 1; min-width: 0; font-size: 13px; font-family: inherit;
+  background: var(--bg); color: var(--fg);
+  border: 1px solid var(--accent); border-radius: 4px; padding: 1px 6px; outline: none;
+}
+
+/* ---------- Tiptap 编辑区无边框（与正常书写一致） ---------- */
+.tiptap, .tiptap:focus, .ProseMirror:focus, .tiptap:focus-visible {
+  outline: none !important; border: none !important; box-shadow: none !important;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+
+/* ---------- 手机端触控优化 ---------- */
+@media (max-width: 900px) {
+  /* 文件树行加大点击区，长按更易触发 */
+  .tree-row { padding: 10px 10px; font-size: 14.5px; }
+  .tree-toolbar button { padding: 8px 10px; }
+  /* 富文本工具栏：窄屏默认仍只占一行（按钮太多会把编辑区挤没），
+     放不下的组收进尾部「更多」，点一下展开成多行 */
+  .fmt-toolbar button { min-width: 32px; height: 32px; flex: 0 0 auto; }
+  .fmt-toggle { min-width: 44px; height: 32px; }
+  /* 长按菜单（右键菜单）加大触控项 */
+  .ctx-menu { min-width: 160px; font-size: 14px; padding: 6px; }
+  .ctx-menu .dd-item { padding: 10px 12px; }
+  /* 文件树行的「不可选中 + 关 callout」已提到文件顶部（外壳全局生效，
+     平板用 PC 外壳时宽度 ≥900，写在窄屏里根本覆盖不到）；这里只管触控目标尺寸 */
+  .tree-row { touch-action: manipulation; }
+}

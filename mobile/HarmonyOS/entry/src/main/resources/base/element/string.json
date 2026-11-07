@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "MoDown 主模块"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "本地优先的 Markdown 编辑器"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "MoDown"
+    }
+  ]
+}

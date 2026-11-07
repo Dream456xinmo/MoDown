@@ -1,0 +1,10 @@
+{
+  "name": "entry",
+  "version": "0.1.0",
+  "description": "MoDown 主模块（ArkWeb 外壳 + 原生文件桥）",
+  "main": "",
+  "author": "MoDown",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+}

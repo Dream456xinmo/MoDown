@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="MoDown">
+  <defs>
+    <linearGradient id="xmdg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="0.45" stop-color="#4f46e5"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="230" fill="url(#xmdg)"/>
+  <g fill="none" stroke="#fff" stroke-width="75.1" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="174.1,690.3 174.1,314.9 352.4,483.8 530.8,314.9 530.8,690.3"/>
+    <line x1="756.1" y1="314.9" x2="756.1" y2="671.6"/>
+    <polyline points="662.2,558.9 756.1,671.6 849.9,558.9"/>
+  </g>
+</svg>

@@ -1,0 +1,14 @@
+{
+  // hvigor 版本由 DevEco Studio / Command Line Tools 提供；
+  // 这里不锁 dependencies，避免离线机器上去 OHPM 拉包。
+  "modelVersion": "5.0.0",
+  "dependencies": {},
+  "execution": {
+    // 并行任务数，留空用默认
+  },
+  "logging": {
+    "level": "info"
+  },
+  "debugging": {},
+  "nodeOptions": {}
+}

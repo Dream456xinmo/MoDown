@@ -1,0 +1,46 @@
+# ---------- 依赖 ----------
+node_modules/
+**/node_modules/
+
+# ---------- 前端构建产物 ----------
+frontend/dist/
+frontend/dist-mobile/
+frontend/dist.7z
+desktop/frontend/dist/
+desktop/web.zip
+
+# ---------- 桌面端构建产物（保留 appicon 与 Windows 资源文件） ----------
+desktop/build/bin/
+
+# ---------- 移动端构建产物 ----------
+mobile/www/
+mobile/apk/
+mobile/hap/
+mobile/Android/.gradle/
+mobile/Android/build/
+mobile/Android/app/build/
+mobile/Android/capacitor-cordova-android-plugins/build/
+mobile/Android/app/src/main/assets/public/
+mobile/Android/local.properties
+# 签名材料不入库
+mobile/Android/keystore/
+mobile/Android/keystore.properties
+mobile/HarmonyOS/.hvigor/
+mobile/HarmonyOS/.idea/
+mobile/HarmonyOS/entry/build/
+mobile/HarmonyOS/entry/src/main/resources/rawfile/
+
+# ---------- 调试工具与临时产物 ----------
+tools/*
+!tools/*.ps1
+!tools/icon-src/
+!tools/icon-src/**
+tools/edge-*/
+tools/edge-pdf-test/
+tools/buildlog/
+
+# ---------- IDE / 系统 ----------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

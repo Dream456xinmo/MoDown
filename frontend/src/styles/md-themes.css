@@ -1,0 +1,261 @@
+/* ============================================================
+   Markdown 渲染主题：default / github / vuepress / readable
+   作用域约定：.md-scope（根容器） + .md-theme-* 主题类
+   正文容器：.md-body（预览）或 .tiptap（富文本编辑器）
+   ============================================================ */
+
+/* ---------- 主题变量 ---------- */
+.md-theme-default {
+  --md-font: -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  --md-size: 15px;
+  --md-heading-weight: 700;
+  --md-link: var(--accent);
+  --md-code-bg: var(--code-bg);
+  --md-code-inline-bg: var(--code-bg);
+  --md-quote-border: var(--border);
+  --md-quote-bg: transparent;
+  --md-quote-fg: var(--fg-dim);
+  --md-hr: var(--border);
+  --md-table-border: var(--border);
+  --md-pre-bg: var(--code-bg);
+  --md-radius: 8px;
+}
+.md-theme-github {
+  --md-font: -apple-system, "Segoe UI", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --md-size: 15px;
+  --md-heading-weight: 600;
+  --md-link: #0969da;
+  --md-code-bg: #f6f8fa;
+  --md-code-inline-bg: rgba(175, 184, 193, 0.3);
+  --md-quote-border: #d0d7de;
+  --md-quote-bg: transparent;
+  --md-quote-fg: #656d76;
+  --md-hr: #d0d7de;
+  --md-table-border: #d0d7de;
+  --md-pre-bg: #f6f8fa;
+  --md-radius: 6px;
+}
+.md-theme-vuepress {
+  --md-font: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  --md-size: 15.5px;
+  --md-heading-weight: 600;
+  --md-link: #3451b2;
+  /* 浅色模式下代码块也用浅色底，深色底只在 .dark 下启用 */
+  --md-code-bg: #f6f8fa;
+  --md-code-inline-bg: rgba(142, 150, 170, 0.14);
+  --md-quote-border: transparent;
+  --md-quote-bg: rgba(66, 133, 244, 0.1);
+  --md-quote-fg: inherit;
+  --md-hr: #eaecef;
+  --md-table-border: #dbe2ea;
+  --md-pre-bg: #f6f8fa;
+  --md-radius: 8px;
+}
+.md-theme-readable {
+  --md-font: Georgia, "Times New Roman", "Songti SC", "SimSun", serif;
+  --md-size: 17px;
+  --md-heading-weight: 700;
+  --md-link: #b45309;
+  --md-code-bg: #f5f1e8;
+  --md-code-inline-bg: #f5f1e8;
+  --md-quote-border: #d6c9ae;
+  --md-quote-bg: #faf7f0;
+  --md-quote-fg: #7a6f5a;
+  --md-hr: #d6c9ae;
+  --md-table-border: #d6c9ae;
+  --md-pre-bg: #f5f1e8;
+  --md-radius: 4px;
+}
+/* ---------- Vue 文档风（浅色 / 深色） ---------- */
+.md-theme-vue {
+  --md-font: -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  --md-size: 15.5px;
+  --md-heading-weight: 600;
+  --md-link: #3ba776;
+  --md-code-bg: #f4f6f8;
+  --md-code-inline-bg: rgba(66, 184, 131, 0.12);
+  --md-quote-border: #42b883;
+  --md-quote-bg: rgba(66, 184, 131, 0.08);
+  --md-quote-fg: #476582;
+  --md-hr: #e2e8ee;
+  --md-table-border: #dfe5ea;
+  /* 浅色模式代码块用浅底 + 深色文字，不再固定成深色面板 */
+  --md-pre-bg: #f4f6f8;
+  --md-radius: 8px;
+}
+.md-theme-vue pre, .md-theme-vue pre code { color: #2c3e50; }
+.md-theme-vue code { color: #476582; }
+/* Vue 文档风的深色适配：由应用主题（.dark）自动切换，不再单列“Vue Dark”主题 */
+.dark .md-theme-vue {
+  --md-link: #42d392;
+  --md-code-bg: #242424;
+  --md-code-inline-bg: rgba(66, 211, 146, 0.14);
+  --md-quote-border: #42d392;
+  --md-quote-bg: rgba(66, 211, 146, 0.08);
+  --md-quote-fg: #a8b1bb;
+  --md-hr: #3a3f46;
+  --md-table-border: #3a3f46;
+  --md-pre-bg: #1b1b1f;
+  --fg: #e2e6ea;
+  --fg-dim: #9aa4ae;
+}
+.dark .md-theme-vue pre, .dark .md-theme-vue pre code { color: #abb2bf; }
+.dark .md-theme-vue code { color: #a8d8c4; }
+
+/* 深色下 github/vuepress 代码面板贴近深色 */
+.dark .md-theme-github {
+  --md-link: #4493f8;
+  --md-code-bg: #161b22;
+  --md-code-inline-bg: rgba(110, 118, 129, 0.4);
+  --md-quote-border: #3d444d;
+  --md-quote-fg: #9198a1;
+  --md-hr: #3d444d;
+  --md-table-border: #3d444d;
+  --md-pre-bg: #161b22;
+}
+.dark .md-theme-vuepress {
+  --md-link: #7ba1ff;
+  --md-quote-bg: rgba(66, 133, 244, 0.15);
+  /* 只有应用切到深色时，VuePress 代码块才使用深色面板 */
+  --md-code-bg: #282c34;
+  --md-code-inline-bg: rgba(183, 173, 159, 0.1);
+  --md-pre-bg: #282c34;
+}
+.dark .md-theme-vuepress pre, .dark .md-theme-vuepress pre code { color: #abb2bf; }
+.dark .md-theme-readable {
+  --md-code-bg: #2a261d; --md-code-inline-bg: #2a261d;
+  --md-quote-bg: #24211a; --md-hr: #4a4436; --md-table-border: #4a4436;
+  --md-pre-bg: #2a261d; --md-quote-fg: #a89f88; --md-link: #d9a441;
+}
+
+/* ---------- 通用排版 ---------- */
+.md-scope .md-body,
+.md-scope .tiptap {
+  font-family: var(--md-font);
+  font-size: var(--md-size);
+  line-height: 1.75;
+  color: var(--fg);
+  word-wrap: break-word;
+}
+.md-scope .md-body > :first-child,
+.md-scope .tiptap > :first-child { margin-top: 0; }
+.md-scope :is(h1, h2, h3, h4, h5, h6) {
+  font-weight: var(--md-heading-weight);
+  margin: 1.4em 0 0.6em;
+  line-height: 1.3;
+}
+.md-scope h1 { font-size: 1.7em; }
+.md-scope h2 { font-size: 1.35em; }
+.md-scope h3 { font-size: 1.15em; }
+/* h4–h6 也要有独立字号层级，否则与正文同尺寸、看着像加粗段落（富文本/预览共用） */
+.md-scope h4 { font-size: 1.02em; }
+.md-scope h5 { font-size: 0.94em; }
+.md-scope h6 { font-size: 0.88em; color: var(--fg-dim); }
+.md-scope p { margin: 0.7em 0; }
+.md-scope a { color: var(--md-link); text-decoration: none; }
+.md-scope a:hover { text-decoration: underline; }
+.md-scope img { max-width: 100%; border-radius: var(--md-radius); }
+.md-scope hr { border: none; border-top: 2px solid var(--md-hr); margin: 1.6em 0; }
+.md-scope blockquote {
+  margin: 0.8em 0;
+  padding: 8px 14px;
+  border-left: 4px solid var(--md-quote-border);
+  background: var(--md-quote-bg);
+  color: var(--md-quote-fg);
+  border-radius: 0 var(--md-radius) var(--md-radius) 0;
+}
+.md-scope ul, .md-scope ol { padding-left: 1.6em; margin: 0.6em 0; }
+.md-scope li { margin: 0.25em 0; }
+.md-scope li > p { margin: 0.2em 0; }
+.md-scope code {
+  background: var(--md-code-inline-bg);
+  padding: 0.2em 0.45em;
+  border-radius: 4px;
+  font-family: "Cascadia Code", Consolas, "JetBrains Mono", monospace;
+  font-size: 0.88em;
+}
+.md-scope pre {
+  background: var(--md-pre-bg);
+  padding: 14px 16px;
+  border-radius: var(--md-radius);
+  overflow-x: auto;
+  margin: 0.9em 0;
+  line-height: 1.55;
+}
+.md-scope pre code {
+  background: none;
+  padding: 0;
+  font-size: 13.5px;
+  color: inherit;
+}
+.md-scope table { border-collapse: collapse; margin: 0.9em 0; display: block; max-width: 100%; overflow-x: auto; }
+.md-scope th, .md-scope td { border: 1px solid var(--md-table-border); padding: 6px 12px; }
+.md-scope th { font-weight: 600; }
+.md-scope del { opacity: 0.7; }
+
+/* github：标题下划线（GitHub 风格仅 H1/H2） */
+.md-theme-github h1, .md-theme-github h2 {
+  border-bottom: 1px solid var(--md-hr);
+  padding-bottom: 0.3em;
+}
+/* vuepress：浅色模式深色文字，切到深色模式后由 .dark 覆盖成浅色文字 */
+.md-theme-vuepress pre, .md-theme-vuepress pre code { color: #2c3e50; }
+/* GFM 任务列表：纸面主题下灰字，深色时回归应用前景色 */
+.dark .md-scope .task-list-item { color: var(--fg-dim); }
+/* readable：两端对齐、更宽字距 */
+.md-theme-readable .md-body, .md-theme-readable .tiptap { text-align: justify; letter-spacing: 0.01em; }
+
+/* ---------- highlight.js token（浅/深两套，跨主题通用） ---------- */
+.md-scope .hljs-comment, .md-scope .hljs-quote { color: #6a737d; font-style: italic; }
+.md-scope .hljs-keyword, .md-scope .hljs-selector-tag, .md-scope .hljs-literal { color: #cf222e; }
+.md-scope .hljs-string, .md-scope .hljs-regexp, .md-scope .hljs-addition { color: #0a3069; }
+.md-scope .hljs-number, .md-scope .hljs-symbol, .md-scope .hljs-bullet { color: #005cc5; }
+.md-scope .hljs-title, .md-scope .hljs-function, .md-scope .hljs-section { color: #8250df; }
+.md-scope .hljs-attr, .md-scope .hljs-attribute, .md-scope .hljs-variable,
+.md-scope .hljs-selector-class, .md-scope .hljs-selector-id { color: #e36209; }
+.md-scope .hljs-built_in, .md-scope .hljs-type, .md-scope .hljs-class { color: #d73a49; }
+.md-scope .hljs-tag, .md-scope .hljs-name { color: #22863a; }
+.md-scope .hljs-meta, .md-scope .hljs-deletion { color: #6a737d; }
+.dark .md-scope .hljs-comment, .dark .md-scope .hljs-quote { color: #8b949e; }
+.dark .md-scope .hljs-keyword, .dark .md-scope .hljs-selector-tag, .dark .md-scope .hljs-literal { color: #ff7b72; }
+.dark .md-scope .hljs-string, .dark .md-scope .hljs-regexp, .dark .md-scope .hljs-addition { color: #a5d6ff; }
+.dark .md-scope .hljs-number, .dark .md-scope .hljs-symbol { color: #79c0ff; }
+.dark .md-scope .hljs-title, .dark .md-scope .hljs-function, .dark .md-scope .hljs-section { color: #d2a8ff; }
+.dark .md-scope .hljs-attr, .dark .md-scope .hljs-variable, .dark .md-scope .hljs-selector-class { color: #ffa657; }
+.dark .md-scope .hljs-built_in, .dark .md-scope .hljs-type, .dark .md-scope .hljs-class { color: #ff7b72; }
+.dark .md-scope .hljs-tag, .dark .md-scope .hljs-name { color: #7ee787; }
+/* vuepress 深色代码底上强制 One-Dark 配色（仅深色模式） */
+.dark .md-theme-vuepress pre .hljs-comment { color: #5c6370; }
+.dark .md-theme-vuepress pre .hljs-keyword { color: #c678dd; }
+.dark .md-theme-vuepress pre .hljs-string { color: #98c379; }
+.dark .md-theme-vuepress pre .hljs-number { color: #d19a66; }
+.dark .md-theme-vuepress pre .hljs-title { color: #61afef; }
+.dark .md-theme-vuepress pre .hljs-attr, .dark .md-theme-vuepress pre .hljs-variable { color: #e06c75; }
+
+/* ---------- Tiptap 编辑区 ---------- */
+.rich-host {
+  flex: 1; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column;
+  background: var(--editor-bg);
+}
+.rich-scroll {
+  flex: 1; overflow-y: auto; padding: 18px 24px; outline: none; min-height: 0;
+}
+/* 富文本正文与预览同宽（72ch）；min-height 让内容下方的空白也属于可编辑区，
+   这样有图片/代码块时也能直接点下方继续写，而不是必须点到正文最后一行。 */
+.rich-scroll .tiptap {
+  max-width: 72ch;
+  margin: 0 auto;
+  min-height: 100%;
+  padding-bottom: 18vh;
+}
+/* Tiptap 代码块也加一条边（与预览代码块观感一致） */
+.md-scope .tiptap pre {
+  border: 1px solid var(--md-table-border);
+}
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left; height: 0; pointer-events: none; color: var(--fg-dim);
+}
+/* 编辑器内选中态 */
+.md-scope ::selection { background: var(--bg-active); }

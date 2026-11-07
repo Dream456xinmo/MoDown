@@ -1,0 +1,9 @@
+{
+  "modelVersion": "5.0.0",
+  "name": "modown",
+  "version": "0.1.0",
+  "description": "MoDown 鸿蒙（HarmonyOS NEXT / ArkWeb）壳工程",
+  "private": true,
+  "dependencies": {},
+  "devDependencies": {}
+}
