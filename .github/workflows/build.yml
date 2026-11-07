@@ -154,7 +154,7 @@ jobs:
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            ca-certificates curl git gzip build-essential pkg-config \
+            ca-certificates curl git gzip file build-essential pkg-config \
             libgtk-3-dev libwebkit2gtk-4.0-dev
 
       - uses: actions/checkout@v4
