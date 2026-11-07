@@ -1,5 +1,7 @@
 # MoDown · 跨平台 Markdown 编辑器
 
+> 本地优先的跨平台 Markdown 编辑器：Tiptap 富文本、Monaco 源码、分屏预览，支持 Windows / Linux / Android / 鸿蒙 / 网页，导出 MD / HTML / DOC / PDF。
+
 本地优先（local-first）的 Markdown 编辑器，**同一套前端代码**跑在 PC 与移动端：
 桌面端偏写作与文档管理，移动端偏随时记录、浏览和轻编辑。
 
