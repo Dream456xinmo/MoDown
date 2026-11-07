@@ -1,0 +1,230 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================
+  # Android（minSdk 24 = Android 7.0+）
+  # 产物是可直接安装的 debug APK；正式发布可在仓库 Secrets 配好
+  # 签名后把 assembleDebug 换成 assembleRelease。
+  # ============================================================
+  android:
+    name: Android (API 24+)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses > /dev/null
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+
+      - name: Build mobile web assets
+        run: |
+          cd frontend
+          npm ci
+          npx vite build --mode mobile --outDir ../mobile/www --emptyOutDir
+
+      - name: Sync Capacitor
+        run: |
+          cd mobile
+          npm ci
+          # 国内镜像只用于本机；GitHub Runner 上换回官方 Gradle 发行版
+          sed -i 's#mirrors.cloud.tencent.com/gradle#services.gradle.org/distributions#' Android/gradle/wrapper/gradle-wrapper.properties
+          npx cap sync android
+
+      - name: Assemble APK
+        run: |
+          cd mobile/Android
+          chmod +x gradlew
+          ./gradlew --no-daemon --stacktrace assembleDebug
+
+      - name: Collect APK
+        run: |
+          mkdir -p dist
+          APK=$(find mobile/Android/app/build/outputs/apk/debug -name '*.apk' | head -1)
+          test -n "$APK"
+          cp "$APK" dist/MoDown-android7-debug.apk
+          ls -lh dist/MoDown-android7-debug.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MoDown-Android
+          path: dist/MoDown-android7-debug.apk
+          retention-days: 14
+
+  # ============================================================
+  # Windows（x64）
+  # 用 Wails CLI 生成带 manifest / 图标的 MoDown.exe。
+  # ============================================================
+  windows:
+    name: Windows (x64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: desktop/go.mod
+          cache-dependency-path: desktop/go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Wails CLI
+        shell: pwsh
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0
+          echo "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          wails version
+
+      - name: Build frontend and web.zip
+        shell: pwsh
+        run: |
+          Push-Location frontend
+          npm ci
+          Pop-Location
+          ./desktop/copy-frontend.ps1
+
+      - name: Build Windows executable
+        shell: pwsh
+        working-directory: desktop
+        run: wails build -platform windows/amd64 -s -skipbindings
+
+      - name: Collect executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item desktop/build/bin/MoDown.exe dist/MoDown-windows-x64.exe
+          Get-Item dist/MoDown-windows-x64.exe | Select-Object Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MoDown-Windows
+          path: dist/MoDown-windows-x64.exe
+          retention-days: 14
+
+  # ============================================================
+  # Linux（Ubuntu 20.04 / glibc 2.31，兼容 20.04 及以上）
+  #
+  # GitHub 已下线 ubuntu-20.04 Runner，因此用 ubuntu:20.04 容器编译：
+  # 这样二进制链接的是 20.04 的 glibc 与 WebKitGTK 4.0，可在 20.04+ 运行。
+  # ============================================================
+  linux:
+    name: Linux (Ubuntu 20.04, x64)
+    runs-on: ubuntu-latest
+    container: ubuntu:20.04
+    steps:
+      - name: Install base packages
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates curl git gzip build-essential pkg-config \
+            libgtk-3-dev libwebkit2gtk-4.0-dev
+
+      - uses: actions/checkout@v4
+
+      - name: Install Go 1.25
+        run: |
+          curl -fsSL https://go.dev/dl/go1.25.0.linux-amd64.tar.gz -o /tmp/go.tgz
+          rm -rf /usr/local/go
+          tar -C /usr/local -xzf /tmp/go.tgz
+          echo "/usr/local/go/bin" >> "$GITHUB_PATH"
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+
+      - name: Install Node.js 22
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+          DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+          node --version
+          npm --version
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Build Linux binary
+        run: |
+          rm -rf desktop/frontend/dist
+          cp -a frontend/dist desktop/frontend/dist
+          cd desktop
+          go run ./tools/packweb -src frontend/dist -out web.zip
+          CGO_ENABLED=1 go build -tags "desktop,production" -ldflags "-s -w" -o build/bin/MoDown .
+          file build/bin/MoDown
+          ldd build/bin/MoDown | grep -E 'webkit|gtk|not found' || true
+
+      - name: Package artifact
+        run: |
+          mkdir -p dist
+          tar -C desktop/build/bin -czf dist/MoDown-linux-x64-ubuntu20.04.tar.gz MoDown
+          ls -lh dist/MoDown-linux-x64-ubuntu20.04.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MoDown-Linux
+          path: dist/MoDown-linux-x64-ubuntu20.04.tar.gz
+          retention-days: 14
+
+  # ============================================================
+  # 网页端静态产物
+  # ============================================================
+  web:
+    name: Web (static)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build web bundle
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Package web bundle
+        run: |
+          cd frontend/dist
+          zip -r ../../MoDown-web.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MoDown-Web
+          path: MoDown-web.zip
+          retention-days: 14

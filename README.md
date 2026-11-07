@@ -6,6 +6,34 @@
 > 编译 / 配置 / 验证命令请直接看 **[AGENTS.md](AGENTS.md)**（含 PC、手机、macOS、Linux 全部构建方式）。
 > 需求与界面设计见 **[方案.md](方案.md)**。
 
+## 截图
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/desktop-light.png" alt="桌面端浅色" width="480"></td>
+    <td><img src="docs/screenshots/desktop-dark.png" alt="桌面端深色" width="480"></td>
+  </tr>
+  <tr>
+    <td align="center">桌面端 · 浅色（分屏编辑 / 72ch 预览）</td>
+    <td align="center">桌面端 · 深色（主题自动适配）</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/image-viewer.png" alt="图片查看器" width="480"></td>
+    <td><img src="docs/screenshots/settings-about.png" alt="设置" width="480"></td>
+  </tr>
+  <tr>
+    <td align="center">预览图片查看器（缩放 / 拖拽）</td>
+    <td align="center">设置 · 关于</td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/screenshots/tablet.png" alt="平板端" width="430">
+  <img src="docs/screenshots/mobile.png" alt="移动端" width="280">
+  <br>
+  平板 / 手机（Android、HarmonyOS、网页端同一套界面）
+</p>
+
 ## 功能
 
 - Markdown 实时编辑与预览：富文本（Tiptap）/ 源码（CodeMirror 6）/ VSCode 网页版（Monaco，**默认开启**）三种编辑器可切换
@@ -99,6 +127,23 @@ npm run harmony        # 全流程出 HAP：需鸿蒙工具链 + 华为开发者
 
 只想看手机界面：`cd frontend; npm run dev`，浏览器设备工具栏调到 430×880 即可。
 
+## 云编译（GitHub Actions）
+
+工作流文件：`.github/workflows/build.yml`。推送 `main`、打 `v*` 标签，或在 Actions 页面手动 `workflow_dispatch` 即可触发。
+
+| Job | Runner | 产物 |
+| --- | --- | --- |
+| Android（minSdk 24 = Android 7.0+） | `ubuntu-latest` + JDK 21 + Android SDK 36 | `MoDown-android7-debug.apk` |
+| Windows x64 | `windows-latest` + Go + Node + Wails v2.16 | `MoDown-windows-x64.exe` |
+| Linux x64（Ubuntu 20.04+） | `ubuntu:20.04` 容器（glibc 2.31 + WebKitGTK 4.0） | `MoDown-linux-x64-ubuntu20.04.tar.gz` |
+| 网页端 | `ubuntu-latest` + Node 22 | `MoDown-web.zip`（静态站点） |
+
+说明：
+
+- Android 默认产出 **debug 签名** APK，可直接安装测试；正式发版时在仓库 Secrets 配好 keystore 后把 `assembleDebug` 换成 `assembleRelease`。
+- Linux 使用 `ubuntu:20.04` 容器编译，链接 20.04 的 glibc/WebKitGTK，因此可在 Ubuntu 20.04 及以上运行。
+- 所有产物在对应 Actions 运行页面的 **Artifacts** 区域下载，保留 14 天。
+
 ## 体积与启动
 
 PC 版 exe 约 **15.3MB**（此前内嵌未压缩前端资源时是 26MB）：
@@ -113,8 +158,8 @@ PC 版 exe 约 **15.3MB**（此前内嵌未压缩前端资源时是 26MB）：
 | 平台 | 宿主 / 壳 | 状态 |
 | --- | --- | --- |
 | Windows 10/11 | Go + Wails v2（WebView2） | 已实现，当前主力 |
-| macOS / Linux | Go + Wails v2 | 代码已兼容（`*_other.go` 空实现），需在目标系统上构建 |
-| Android 7+ | Capacitor 8 WebView 壳（`mobile/Android`，`gradlew` 出 APK） | 壳工程已入库，可出签名 APK；原生文件读写仍是 mock 桥（Phase 3） |
+| macOS / Linux | Go + Wails v2 | 代码已兼容（`*_other.go` 空实现）；Linux 由 GitHub Actions 用 Ubuntu 20.04 容器构建 |
+| Android 7+ | Capacitor 8 WebView 壳（`mobile/Android`，`gradlew` 出 APK） | 壳工程已入库，GitHub Actions 可出可安装 APK；原生文件读写仍是 mock 桥（Phase 3） |
 | HarmonyOS NEXT（5+） | 纯 ArkWeb 壳（`mobile/HarmonyOS`，`hvigorw` 出 HAP） | 壳工程 + `window.nativeHarmony` 原生桥已入库；本机工具链已验证产出未签名 HAP，真机安装需华为签名证书（AGENTS.md 3.7） |
 | Win7 / Win8 | Go 1.20 + Wails v2 + WebView2 109 | 规划中的兼容线 |
 | 任意 WebView 宿主 | 纯静态 `frontend/dist`（`base: './'`） | 只需实现一个 PlatformBridge |

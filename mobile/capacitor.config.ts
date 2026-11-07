@@ -11,6 +11,8 @@ const config: CapacitorConfig = {
   webDir: 'www',
   backgroundColor: '#ffffff',
   android: {
+    // 工程目录使用大写 Android（Windows 不区分大小写，Linux/CI 必须显式指定）
+    path: 'Android',
     allowBackup: true,
     appendedArguments: [],
     gradleVersion: undefined
