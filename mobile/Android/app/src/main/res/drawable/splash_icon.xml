@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  开屏图标：固定 108dp 正方形，由系统居中显示并按固定尺寸缩放。
+  不要再用整张屏幕尺寸的 splash.png 当 android:background —— 不同机型的
+  长宽比会把位图整体拉伸，里面的图标也跟着变形。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 品牌渐变圆角底 -->
+    <path
+        android:pathData="M24,4 L84,4 C95.05,4 104,12.95 104,24 L104,84 C104,95.05 95.05,104 84,104 L24,104 C12.95,104 4,95.05 4,84 L4,24 C4,12.95 12.95,4 24,4 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="4"
+                android:startY="4"
+                android:endX="104"
+                android:endY="104"
+                android:type="linear">
+                <item android:offset="0" android:color="#FF6366F1" />
+                <item android:offset="0.45" android:color="#FF4F46E5" />
+                <item android:offset="1" android:color="#FF7C3AED" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 白色 M↓ 标志（与桌面/Android 自适应图标同一套路径） -->
+    <group>
+        <path
+            android:pathData="M32.4,65.4 L32.4,41.4 L43.8,52.2 L55.2,41.4 L55.2,65.4"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="4.8"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M69.6,41.4 L69.6,64.2"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="4.8"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M63.6,57 L69.6,64.2 L75.6,57"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="4.8"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

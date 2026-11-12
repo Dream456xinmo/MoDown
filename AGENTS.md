@@ -324,7 +324,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File d:\MoDown\mobile\build-hap.p
 | 浏览器侧真实目录工作区（File System Access API） | `frontend/src/bridge/fsAccess.ts` |
 | 浏览器文件选择 / data URL / 重名让路（导入共用） | `frontend/src/utils/filePick.ts` |
 | 图标（内置 SVG 集，界面用） | `frontend/src/components/IconSvg.vue` |
-| **应用图标**（PC exe / Android launcher+splash / 网页 favicon，一套生成） | `tools/make-icon.ps1`（纯 GDI+，无外部依赖）。改一次标志要同步三处：`Draw-Mark` 栅格、脚本内联的 `icon.svg`、`ic_launcher_foreground.xml` 矢量路径 |
+| **应用图标**（PC exe / Android launcher+splash / 网页 favicon，一套生成） | `tools/make-icon.ps1`（纯 GDI+，无外部依赖）。改一次标志要同步：`Draw-Mark` 栅格、脚本内联的 `icon.svg`、`ic_launcher_foreground.xml`、`drawable/splash_icon.xml` 矢量路径 |
 | 文字可选中范围（控件禁选 / 编辑器·浏览区·输入栏可选） | `frontend/src/styles/global.css`（`html,body` 全局 `user-select:none` + 白名单放开内容区，再对 chrome 类名显式 `:none`） |
 | 长按菜单与「幽灵菜单」抑制 | `frontend/src/composables/longpress.ts`（模块级 `lastTouchAt` / `classifyContextMenu` / `noteMenuOpened` / `noteMenuClosed` / `menuSuppressed`），消费方 `frontend/src/components/{TreeItem,FileTree}.vue` |
 | 文件树工具栏（新建 / 新建目录 / 导入 / 打开 / **刷新**） | `frontend/src/components/FileTree.vue` |
@@ -463,7 +463,10 @@ Get-Content "$env:APPDATA\MoDown\settings.json" -Raw
   另外 `global.css` 里 Monaco 那几条 `user-select:text` + 1px 输入代理
   对 PC（WebView2）仍有用，保留；**别给编辑器宿主改 `touch-action`**，双指缩放是 `v-pinch` 指令在用。
 - 应用图标由 `tools/make-icon.ps1` 一处生成全套（GDI+ 画，透明通道可控、16px 可读；≤32px 自动加粗笔画）。
-  标志几何定义在 24×24 栅格上，`icon.svg` 与 `ic_launcher_foreground.xml` 是它的**手抄副本**，改栅格必须三处一起改。
+  标志几何定义在 24×24 栅格上，`icon.svg`、`ic_launcher_foreground.xml` 与 `drawable/splash_icon.xml` 是它的**手抄副本**，改栅格必须一起改。
+- **Android 开屏不要再用整屏 `splash.png` 当 `android:background`**：不同机型长宽比会把位图与里面的图标一起拉伸。
+  现在用 `Theme.SplashScreen` 的 `windowSplashScreenBackground` + 固定 108dp 正方形的 `drawable/splash_icon.xml`，
+  由系统居中缩放（手机 / 平板共用），深色模式背景色在 `values-night/colors.xml`。
   Android 自适应图标背景已指向 `@drawable/ic_launcher_background`（品牌渐变），不是原来的 `@color/...` 平色。
 - `tools/` 里是调试杂物（截图、`WebView2*.exe` 安装包、`pandoc/pandoc.zip` 作为 DOC/PDF 导出可选依赖、临时 html），不是源码。
 - `desktop/frontend/wailsjs/` 是自动生成的绑定，改 Go 接口后由 `wails build` 重新生成，别手写。

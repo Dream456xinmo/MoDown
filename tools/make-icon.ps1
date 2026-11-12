@@ -1,4 +1,4 @@
-<#
+﻿<#
 MoDown icon generator. Pure GDI+ (System.Drawing), no external deps, no network.
 Design: rounded-square indigo->violet gradient tile + white Markdown mark (M + down arrow).
 The mark geometry follows the 24x24 Markdown grid so it stays readable at 16px.
@@ -8,7 +8,7 @@ Outputs
   desktop/build/windows/icon.ico       16/24/32/48/64/128/256 (32bpp BMP entries)
   frontend/public/{favicon.ico,icon.svg}
   mobile/Android/.../res/mipmap-*/{ic_launcher,ic_launcher_round,ic_launcher_foreground}.png
-  mobile/Android/.../res/drawable*/splash.png (same pixel size as the file it replaces)
+  mobile/Android/.../res/drawable/splash_icon.xml (square splash icon)
   mobile/Android/.../res/drawable/ic_launcher_background.xml (adaptive-icon gradient layer)
 
 Usage: powershell -NoProfile -ExecutionPolicy Bypass -File tools\make-icon.ps1
@@ -136,20 +136,6 @@ function New-GlyphIcon([int]$size) {
   $cv = New-Cv $size $size
   $g = $cv.G
   Draw-Mark $g ([single]$size) ([single]0.40) $White
-  $g.Dispose()
-  return $cv.Bmp
-}
-
-function New-Splash([int]$w, [int]$h) {
-  $cv = New-Cv $w $h
-  $g = $cv.G
-  $g.Clear([System.Drawing.Color]::White)
-  $short = [Math]::Min($w, $h)
-  $side = [int]($short * 0.34)
-  if ($side -lt 32) { $side = 32 }
-  $tile = New-SquareIcon $side
-  $g.DrawImage($tile, [single](($w - $side) / 2), [single](($h - $side) / 2), [single]$side, [single]$side)
-  $tile.Dispose()
   $g.Dispose()
   return $cv.Bmp
 }
@@ -343,16 +329,50 @@ if ($Only -in @('', 'android')) {
     }
   }
 
-  # splash: keep whatever pixel size the existing file has
-  Get-ChildItem -Path $resDir -Filter 'splash.png' -Recurse | ForEach-Object {
-    $img = [System.Drawing.Image]::FromFile($_.FullName)
-    $w = $img.Width; $h = $img.Height
-    $img.Dispose()
-    $bmp = New-Splash $w $h
-    Save-Png $bmp $_.FullName
-    $bmp.Dispose()
-    Write-Host ("  splash {0} {1}x{2}" -f $_.Directory.Name, $w, $h)
-  }
+  # 开屏图标：固定 108dp 正方形矢量，不再生成会被机型长宽比拉伸的整屏 splash.png
+  $splashIcon = @'
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M24,4 L84,4 C95.05,4 104,12.95 104,24 L104,84 C104,95.05 95.05,104 84,104 L24,104 C12.95,104 4,95.05 4,84 L4,24 C4,12.95 12.95,4 24,4 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="4" android:startY="4"
+                android:endX="104" android:endY="104"
+                android:type="linear">
+                <item android:offset="0" android:color="#FF6366F1" />
+                <item android:offset="0.45" android:color="#FF4F46E5" />
+                <item android:offset="1" android:color="#FF7C3AED" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <group>
+        <path
+            android:pathData="M32.4,65.4 L32.4,41.4 L43.8,52.2 L55.2,41.4 L55.2,65.4"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="4.8"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M69.6,41.4 L69.6,64.2"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="4.8"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M63.6,57 L69.6,64.2 L75.6,57"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="4.8"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>
+'@
+  [IO.File]::WriteAllText((Join-Path $resDir 'drawable\splash_icon.xml'), $splashIcon, (New-Object System.Text.UTF8Encoding $false))
 }
 
 Write-Host 'icon generation done.'
