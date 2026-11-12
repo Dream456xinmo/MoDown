@@ -10,6 +10,7 @@ import { DEFAULT_DEVICE_MODE, normalizeDeviceMode, type DeviceMode } from '../ut
 import { pickFolder } from '../composables/pickers'
 import { pickWorkspaceDialog } from '../composables/workspaces'
 import { uiConfirm } from '../composables/dialogs'
+import { clearAssetSrcCache } from '../utils/assetSrc'
 
 export interface Settings {
   /** 桌面端：左编辑右预览分屏 */
@@ -318,6 +319,7 @@ export const useWorkspace = defineStore('workspace', {
         if (this.externalPath) this.closeDocument()
         this.externalPath = ''
         if (this.settings.workspaceRoot !== '/') await this.updateSetting('workspaceRoot', '/')
+        clearAssetSrcCache()
         await this.refreshTree()
         this.notifyOk(`已打开工作区：${p}`)
         return
@@ -381,6 +383,7 @@ export const useWorkspace = defineStore('workspace', {
       this.stats = { chars: 0, lines: 0, words: 0 }
       this.dirty = false
       this.openSeq++
+      clearAssetSrcCache()
       if (this.settings.workspaceRoot !== '/') await this.updateSetting('workspaceRoot', '/')
       await this.refreshTree()
       this.notifyOk(`已打开工作区：${ws.name}`)

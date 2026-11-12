@@ -169,8 +169,10 @@ PC 的 `frontend/dist` 不受影响（详见 3.6）。鸿蒙复用**同一份** 
   打印 WebView 复用成员 `printWeb`（打印是异步的，调起就销毁会得到空任务），Activity 变了才重建。
 - **HTML 预览里的链接**：`bridge.openUrl(url)` 才是「打开网址」（安卓 → 系统浏览器 `ACTION_VIEW`，桌面 → `runtime.BrowserOpenURL`，
   浏览器 → 新标签页）；别用 `openExternal(path)`，那是桌面「打开工作区外的文件」，语义完全不同。
-- 仍待做：系统目录里的图片是 `content://`，WebView 不能直接当 `<img src>` → 预览不显示图（`assetUrl()` 返回 `''`），
-  导出时靠 `readAssetDataUrl()` 内联成 data URL；`readAssetDataUrl` / 附件导入在系统目录下走原生，其余设置仍走 localStorage。
+- 系统目录里的图片是 `content://`，WebView 不能直接当 `<img src>`（`assetUrl()` 对系统目录返回 `''`）。
+  预览 / 富文本 / 文件查看器统一走 `frontend/src/utils/assetSrc.ts`：先试 `assetUrl()`，为空再 `readAssetDataUrl()`
+  转 data URL；图片节点只在显示层用解析后的地址，保存 Markdown 仍写原始 `/assets/x.png`。导出时同样由
+  `readAssetDataUrl()` 内联成 data URL；附件导入在系统目录下走原生，其余设置仍走 localStorage。
 - 鸿蒙桥是 `frontend/src/bridge/harmony.ts`（`createHarmonyBridge()`）：壳用 `javaScriptProxy` 把 `XmdBridge` 挂成
   `window.nativeHarmony`，`invoke(method, argsJson)` 同步、`invokeAsync(...)` 返回 Promise，两者都回
   `{ ok, data, error }` 信封（`data` 再套一层 JSON 文本，ArkTS 严格模式省类型体操）。探测用 `invoke('version')`，

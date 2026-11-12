@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useWorkspace } from '../stores/workspace'
 import { renderMarkdown } from '../utils/mdWorker'
+import { resolveImagesIn } from '../utils/assetSrc'
 import { vPinch } from '../composables/pinchZoom'
 import ImageViewer from './ImageViewer.vue'
 
@@ -19,7 +20,13 @@ async function refresh() {
   ws.setRendering(true)
   try {
     const out = await renderMarkdown(ws.content, true)
-    if (seq === renderSeq) html.value = out
+    if (seq === renderSeq) {
+      html.value = out
+      // v-html 写进去的 /assets/... 在手机（SAF / 鸿蒙沙箱）下不能直接用，
+      // DOM 更新后统一换成 blob/data/raw 地址
+      await nextTick()
+      if (seq === renderSeq && root.value) await resolveImagesIn(root.value, ws.currentPath)
+    }
   } finally {
     if (seq === renderSeq) ws.setRendering(false)
   }

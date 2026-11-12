@@ -12,6 +12,7 @@ import { switchEditMode } from '../utils/editorSwitch'
 import { vPinch } from '../composables/pinchZoom'
 import { CodeBlockHighlight } from '../utils/tiptapCodeHighlight'
 import { TrailingParagraph } from '../utils/tiptapTrailingParagraph'
+import { resolveAssetSrc } from '../utils/assetSrc'
 import { richPositions, savePos } from '../utils/editorState'
 import EditorToolbar from './EditorToolbar.vue'
 
@@ -61,7 +62,12 @@ onMounted(() => {
     element: host.value!,
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] } }),
-      MarkdownImage.configure({ inline: false, allowBase64: false }),
+      MarkdownImage.configure({
+        inline: false,
+        allowBase64: false,
+        // 只影响编辑区显示，保存时仍写回原始路径
+        resolveSrc: src => resolveAssetSrc(src, ws.currentPath)
+      }),
       Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer' } }),
       Placeholder.configure({ placeholder: '开始写作…' }),
       CodeBlockHighlight,

@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useWorkspace } from '../stores/workspace'
 import { bridge } from '../bridge'
 import { buildPreviewHtml } from '../utils/htmlPreview'
+import { resolveAssetSrc } from '../utils/assetSrc'
 import Preview from './Preview.vue'
 import IconSvg from './IconSvg.vue'
 
@@ -19,7 +20,10 @@ const ext = computed(() => {
   const m = /\.([^.]+)$/.exec(ws.currentPath)
   return m ? m[1].toLowerCase() : ''
 })
-const url = computed(() => (ws.currentPath ? bridge.assetUrl(ws.currentPath) : ''))
+/** 普通媒体：能直接给地址的平台（桌面 / 本地工作区 / 鸿蒙） */
+const directUrl = computed(() => (ws.currentPath ? bridge.assetUrl(ws.currentPath) : ''))
+/** 图片单独解析：安卓系统目录是 content://，需要异步读成 data URL 才能显示 */
+const imageUrl = ref('')
 
 type Kind = 'md' | 'image' | 'video' | 'audio' | 'pdf' | 'html' | 'office' | 'other'
 const kind = computed<Kind>(() => {
@@ -61,6 +65,13 @@ watch(
     if (htmlSrc.value) {
       URL.revokeObjectURL(htmlSrc.value)
       htmlSrc.value = ''
+    }
+    const path = ws.currentPath
+    imageUrl.value = ''
+    if (kind.value === 'image' && path) {
+      const resolved = await resolveAssetSrc(path, path)
+      // 快速换文件时只认最后一次
+      if (ws.currentPath === path && kind.value === 'image') imageUrl.value = resolved
     }
     if (kind.value === 'html') {
       try {
@@ -121,14 +132,14 @@ onBeforeUnmount(() => {
 })
 
 /** 在线查看 API：仅对公网可访问的 http(s) 资源有效 */
-const canOnline = computed(() => kind.value === 'office' && /^https?:/i.test(url.value))
+const canOnline = computed(() => kind.value === 'office' && /^https?:/i.test(directUrl.value))
 const onlineViewer = computed(() =>
-  canOnline.value ? 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(url.value) : ''
+  canOnline.value ? 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(directUrl.value) : ''
 )
 /** 内嵌框地址：在线服务可用时优先，否则用原始地址（PDF 直接由内核渲染） */
 const frameSrc = computed(() => {
   if (kind.value === 'office') return useOnline.value && onlineViewer.value ? onlineViewer.value : ''
-  return url.value
+  return directUrl.value
 })
 
 async function openWithSystem() {
@@ -167,13 +178,14 @@ async function openWithSystem() {
       <div class="viewer-body">
         <!-- 图片：原生 img -->
         <div v-if="kind === 'image'" class="viewer-center">
-          <img :src="url" :alt="ws.fileTitle" @error="failed = true" />
+          <img v-if="imageUrl" :src="imageUrl" :alt="ws.fileTitle" @error="failed = true" />
+          <p v-else class="viewer-tip">正在读取图片…</p>
         </div>
 
         <!-- 视频：原生 video（轻量播放器） -->
         <div v-else-if="kind === 'video'" class="viewer-center">
           <video
-            :src="url"
+            :src="directUrl"
             controls
             playsinline
             preload="metadata"
@@ -186,14 +198,14 @@ async function openWithSystem() {
         <div v-else-if="kind === 'audio'" class="viewer-center">
           <IconSvg name="attach" :size="30" />
           <p class="viewer-name">{{ ws.fileTitle }}</p>
-          <audio :src="url" controls preload="metadata" @error="failed = true"></audio>
+          <audio :src="directUrl" controls preload="metadata" @error="failed = true"></audio>
         </div>
 
         <!-- PDF：内核原生渲染 -->
         <iframe
-          v-else-if="kind === 'pdf' && !failed && url"
+          v-else-if="kind === 'pdf' && !failed && directUrl"
           class="viewer-frame"
-          :src="url"
+          :src="directUrl"
           title="PDF 预览"
           @error="failed = true"
         ></iframe>

@@ -4,8 +4,10 @@ import type { Editor } from '@tiptap/core'
 import IconSvg from './IconSvg.vue'
 import { uiPrompt } from '../composables/dialogs'
 import { bridge } from '../bridge'
+import { useWorkspace } from '../stores/workspace'
 
 const props = defineProps<{ editor: Editor | null }>()
+const ws = useWorkspace()
 
 const IMAGE_RE = /\.(png|jpe?g|gif|webp|svg|bmp|ico)(\?|#.*)?$/i
 
@@ -30,7 +32,8 @@ async function importMedia(folder: 'assets' | 'files') {
     const p = await bridge.importAsset(folder)
     if (p) insertAssetPath(p)
   } catch (err: any) {
-    console.warn(err)
+    // 手机上文件选择器 / SAF 写入失败时不能只写 console，用户会以为按钮没反应
+    ws.notifyFail(`导入${folder === 'assets' ? '图片' : '附件'}失败：${String(err?.message ?? err)}`)
   }
 }
 

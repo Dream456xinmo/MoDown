@@ -378,8 +378,8 @@ export function createAndroidBridge(): PlatformBridge {
 
     /**
      * 系统目录里的文件用 content:// 标识，WebView 不能直接当图片地址加载，
-     * 因此这里返回空串（预览不显示图片）；导出时由 readAssetDataUrl 转 data URL 内联。
-     * TODO(Phase 3): 换成自定义 scheme 或本地 http 服务直链。
+     * 因此这里返回空串；真正显示时由 utils/assetSrc.ts 再调用 readAssetDataUrl
+     * 转成 data URL（预览、富文本、文件查看器共用这一条路径）。
      */
     assetUrl(path) {
       if (isSystem()) return ''
