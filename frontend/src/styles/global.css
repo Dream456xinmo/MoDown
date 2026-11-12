@@ -691,6 +691,14 @@ body.pane-resizing, body.pane-resizing * {
 .fmt-toolbar button:hover { background: var(--bg-hover); color: var(--fg); }
 .fmt-toolbar button.active { background: var(--bg-active); color: var(--accent); }
 .fmt-sep { width: 1px; height: 16px; background: var(--border); margin: 0 4px; }
+/* 手机窄屏：压缩工具栏边距和按钮内边距，优先保证 H1–H6 等常用按钮露出来 */
+@media (max-width: 600px) {
+  .fmt-toolbar { padding: 4px 6px; }
+  .fmt-toolbar button { min-width: 25px; padding: 2px 4px; }
+  /* H1–H6 在 320dp 窄屏也要能露出来：文字按钮用更紧凑的字号与内边距 */
+  .fmt-toolbar .fmt-text-btn { min-width: 24px; padding: 2px 3px; font-size: 11px; }
+  .fmt-sep { margin: 0 2px; }
+}
 
 /* ---------- 深/浅色适配：表单控件与配色方案 ---------- */
 :root { color-scheme: light; }

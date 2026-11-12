@@ -176,8 +176,12 @@ const measuringAll = ref(false)
 let widthsCache: number[] = []
 /** 组间距（与 .fmt-bar 的 gap 一致） */
 const BAR_GAP = 3
-/** 折叠时给「更多」按钮预留的宽度（含间距），宁多勿少 */
-const TOGGLE_RESERVE = 78
+/**
+ * 折叠时给「更多」按钮预留的宽度（含间距）。
+ * 实际按钮约 56px + 间距 3px；之前预留 78 会在 320dp 宽的手机上
+ * 凭空吃掉 20px，导致“明明还能放下 H1–H6，却只显示撤销/重做”。
+ */
+const TOGGLE_RESERVE = 64
 
 /** 某组当前是否收起 */
 const isCollapsed = (gi: number) => !expanded.value && !measuringAll.value && gi >= visibleCount.value
